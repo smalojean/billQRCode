@@ -6,7 +6,7 @@ import QrScanner from "https://unpkg.com/qr-scanner@1.4.2/qr-scanner.min.js";
   Remplace WORKER_URL par l'URL de ton Cloudflare Worker déployé, ex:
   const WORKER_URL = "https://ton-worker.xxxx.workers.dev/";
 */
-const WORKER_URL = "https://TON-WORKER.workers.dev/"; // <--- configure ceci
+const WORKER_URL = "https://odd-mode-66e4.smalojean.workers.dev/"; // <--- configure ceci
 
 /* DOM */
 const fileInput = document.getElementById("fileInput");
