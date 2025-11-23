@@ -77,6 +77,21 @@ input[type="file"]{width:100%;}
 .tx-title{font-weight:700;font-size:0.95rem}
 .tx-sub{font-size:0.85rem;color:var(--muted);margin-top:6px;word-break:break-all}
 
+#pdf-content {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+.pdf-transaction {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.pdf-total {
+  margin-top: 12px;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
 @media (min-width:640px){
   .row{flex-wrap:nowrap}
   .btn{min-width:120px}
