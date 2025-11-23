@@ -1,134 +1,121 @@
-import jsPDF from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
-import QrScanner from "https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.min.js";
-import { PDFDocument } from "https://cdn.jsdelivr.net/npm/pdf-lib@1.21.1/dist/pdf-lib.min.js";
+// Récupération de PDF.js injecté dans window
+const pdfjsLib = window.pdfjsLib;
 
-const fileInput = document.getElementById('fileInput');
-const processBtn = document.getElementById('processBtn');
-const clearBtn = document.getElementById('clearBtn');
-const previewPdfBtn = document.getElementById('previewPdfBtn');
-const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-const subtractInput = document.getElementById('subtractInput');
-const status = document.getElementById('status');
-const counts = document.getElementById('counts');
-const resultsList = document.getElementById('resultsList');
-const pdfContent = document.getElementById('pdf-content');
+const fileInput = document.getElementById("fileInput");
+const processBtn = document.getElementById("processBtn");
+const resultsList = document.getElementById("resultsList");
+const status = document.getElementById("status");
 
 let transactions = [];
 
-function updateUI() {
-  resultsList.innerHTML = '';
-  let total = 0;
-  transactions.forEach(tx => {
-    const div = document.createElement('div');
-    div.className = 'transaction-card';
-    div.innerHTML = `
-      <div class="tx-row"><span class="tx-title">${tx.transaction}</span><span>${tx.total}</span></div>
-      <div class="tx-sub">TPS: ${tx.tps} — TVQ: ${tx.tvq}</div>
-    `;
-    resultsList.appendChild(div);
-    total += parseFloat(tx.total.replace(',', '.').replace('$','').trim());
-  });
-  const subtract = parseFloat(subtractInput.value) || 0;
-  counts.innerText = `Transactions uniques: ${transactions.length} — Total: ${(total - subtract).toFixed(2)} $`;
-}
+// Extraction du texte d'une page PDF
+async function extractTextFromPage(page) {
+  const content = await page.getTextContent();
 
-async function processImage(file) {
-  return new Promise((resolve, reject) => {
-    QrScanner.scanImage(file)
-      .then(result => {
-        try {
-          // Ici, on suppose que le QR code contient un JSON de transaction
-          const tx = JSON.parse(result);
-          transactions.push(tx);
-          resolve();
-        } catch(e){
-          console.warn('QR non parsable', e);
-          resolve();
-        }
-      })
-      .catch(e => {
-        console.warn('QR non détecté', e);
-        resolve();
-      });
-  });
-}
-
-async function processPDF(file) {
-  const arrayBuffer = await file.arrayBuffer();
-  const pdfDoc = await PDFDocument.load(arrayBuffer);
-  let text = '';
-  const pages = pdfDoc.getPages();
-  for (const page of pages) {
-    text += await page.getTextContent ? await page.getTextContent() : '';
+  if (content.items.length > 0) {
+    return content.items.map(i => i.str).join(" ");
   }
-  // Parse le texte pour extraire transaction/TPS/TVQ/Total
-  const txMatch = text.match(/Transaction #(\d+)/);
-  const tpsMatch = text.match(/TPS:\s*([\dA-Z]+)/);
-  const tvqMatch = text.match(/TVQ:\s*([\dA-Z]+)/);
-  const totalMatch = text.match(/Total\s*[:\s]*([\d,\.]+)/);
 
-  if(txMatch && totalMatch){
+  console.warn("Aucun texte détecté → OCR...");
+
+  const viewport = page.getViewport({ scale: 3 });
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  const result = await Tesseract.recognize(canvas, "fra", {
+    logger: m => console.log(m)
+  });
+
+  return result.data.text;
+}
+
+// Extraction des montants après un mot-clé
+function extractAmountAfterKeyword(text, keyword) {
+  // Cherche n'importe quel nombre suivi éventuellement d'un $ après le mot-clé
+  const regex = new RegExp(`${keyword}\\s*[:\\s]*([0-9]+[.,]?[0-9]{0,2})\\s*\\$?`, 'gi');
+  const matches = [...text.matchAll(regex)];
+  if (matches.length === 0) return "N/A";
+
+  // Prend le dernier montant trouvé
+  let amount = matches[matches.length - 1][1];
+
+  return amount + " $";
+}
+
+// Extraction de toutes les transactions dans un PDF
+async function processPDF(file) {
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+
+  let text = "";
+
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    text += await extractTextFromPage(page) + " ";
+  }
+
+  // Normalisation des espaces
+  text = text.replace(/\s+/g, " ").trim();
+  console.log("Texte final extrait :", text);
+
+  // Recherche toutes les transactions
+  const txMatches = [...text.matchAll(/Transaction #([\d-]+)/gi)];
+
+  if (!txMatches.length) {
+    console.warn("Aucune transaction trouvée");
+    return;
+  }
+
+  for (const match of txMatches) {
+    // Extraire la portion de texte autour de la transaction pour éviter de confondre plusieurs
+    const txStart = match.index;
+    const nextTx = text.indexOf("Transaction #", txStart + 1);
+    const txText = nextTx > -1 ? text.slice(txStart, nextTx) : text.slice(txStart);
+
+    // Extraction des données
+    // const tpsNumMatch = txText.match(/TPS\s*[:\s]*([\d\w]+)/i);
+    // const tvqNumMatch = txText.match(/TVQ\s*[:\s]*([\d\w]+)/i);
+    // const sousTotal = extractAmountAfterKeyword(txText, "Sous-total");
+    // const tpsMontant = extractAmountAfterKeyword(txText, "TPS");
+    // const tvqMontant = extractAmountAfterKeyword(txText, "TVQ");
+    const total = extractAmountAfterKeyword(txText, "Total");
+
     transactions.push({
-      transaction: `Transaction #${txMatch[1]}`,
-      tps: tpsMatch ? tpsMatch[1] : 'N/A',
-      tvq: tvqMatch ? tvqMatch[1] : 'N/A',
-      total: totalMatch[1] + ' $'
+      transaction: `Transaction #${match[1]}`,
+    //   tps: tpsNumMatch ? tpsNumMatch[1] : "N/A",
+    //   tvq: tvqNumMatch ? tvqNumMatch[1] : "N/A",
+    //   sousTotal,
+    //   tpsMontant,
+    //   tvqMontant,
+      total
     });
   }
 }
 
-processBtn.addEventListener('click', async () => {
-  const files = Array.from(fileInput.files);
-  if(!files.length) return alert('Veuillez sélectionner au moins un fichier');
-  status.innerText = 'Statut: traitement en cours...';
-  for(const file of files){
-    if(file.type.startsWith('image/')){
-      await processImage(file);
-    } else if(file.type === 'application/pdf'){
-      await processPDF(file);
-    }
-  }
-  updateUI();
-  status.innerText = 'Statut: prêt';
-});
+processBtn.addEventListener("click", async () => {
+  const files = [...fileInput.files];
+  if (!files.length) return alert("Sélectionne un PDF");
 
-clearBtn.addEventListener('click', () => {
+  status.textContent = "Traitement...";
   transactions = [];
-  fileInput.value = '';
-  updateUI();
-});
 
-subtractInput.addEventListener('input', updateUI);
+  for (const f of files) {
+    await processPDF(f);
+  }
 
-function generatePDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  let y = 10;
-  doc.setFontSize(12);
-  doc.text("Transactions", 10, y); y += 10;
-  let total = 0;
-  transactions.forEach(tx => {
-    doc.text(`${tx.transaction} — Total: ${tx.total}`, 10, y); y += 8;
-    doc.text(`TPS: ${tx.tps} — TVQ: ${tx.tvq}`, 10, y); y += 8;
-    total += parseFloat(tx.total.replace(',', '.').replace('$','').trim());
-  });
-  const subtract = parseFloat(subtractInput.value) || 0;
-  doc.text(`\nTotal après soustraction: ${(total - subtract).toFixed(2)} $`, 10, y+10);
-  return doc;
-}
+  console.log("Transactions :", transactions);
+  status.textContent = "Terminé";
 
-previewPdfBtn.addEventListener('click', () => {
-  const doc = generatePDF();
-  pdfContent.innerHTML = '';
-  const iframe = document.createElement('iframe');
-  iframe.src = doc.output('bloburl');
-  iframe.width = '100%';
-  iframe.height = '500';
-  pdfContent.style.display = 'block';
-  pdfContent.appendChild(iframe);
-});
-
-downloadPdfBtn.addEventListener('click', () => {
-  const doc = generatePDF();
-  doc.save('transactions.pdf');
+  // Affichage clair
+  resultsList.innerHTML = transactions.map(tx => `
+    <li>
+      <strong>${tx.transaction}</strong><br>
+      Total: ${tx.total}
+    </li>
+  `).join("");
 });

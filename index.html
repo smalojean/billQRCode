@@ -1,56 +1,71 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>QR → Transactions (mobile)</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PDF → Transactions (mobile)</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <header class="topbar">
-    <h1>QR → Transactions</h1>
-    <p class="subtitle">Importe images/PDF → extrait transactions → PDF</p>
-  </header>
+<header class="topbar">
+  <h1>PDF → Transactions</h1>
+  <p class="subtitle">Importe PDFs → extrait transactions → PDF</p>
+</header>
 
-  <main class="container">
+<main class="container">
 
-    <section class="panel">
-      <label class="field-label">Importer des images ou PDF (factures)</label>
-      <input id="fileInput" type="file" accept="image/*,application/pdf" multiple>
-      <div class="row gap-sm">
-        <button id="processBtn" class="btn primary">Scanner & Traiter</button>
-        <button id="clearBtn" class="btn">Réinitialiser</button>
-      </div>
-    </section>
+  <section class="panel">
+    <label class="field-label">Importer des fichiers PDF (factures)</label>
+    <input id="fileInput" type="file" accept="application/pdf" multiple>
+    <div class="row gap-sm">
+      <button id="processBtn" class="btn primary">Traiter</button>
+      <button id="clearBtn" class="btn">Réinitialiser</button>
+    </div>
+  </section>
 
-    <section class="panel">
-      <label class="field-label">Montant à soustraire</label>
-      <input id="subtractInput" type="number" step="0.01" placeholder="0.00" class="input-small">
-      <div class="row gap-sm">
-        <button id="previewPdfBtn" class="btn">Aperçu PDF</button>
-        <button id="downloadPdfBtn" class="btn primary">Générer PDF</button>
-      </div>
-    </section>
+  <section class="panel">
+    <label class="field-label">Montant à soustraire</label>
+    <input id="subtractInput" type="number" step="0.01" placeholder="0.00" class="input-small">
+    <div class="row gap-sm">
+      <button id="previewPdfBtn" class="btn">Aperçu PDF</button>
+      <button id="downloadPdfBtn" class="btn primary">Générer PDF</button>
+    </div>
+  </section>
 
-    <section class="panel small">
-      <div id="status">Statut: prêt</div>
-      <div id="counts">Transactions uniques: 0 — Total: 0,00 $</div>
-    </section>
+  <section class="panel small">
+    <div id="status">Statut: prêt</div>
+    <div id="counts">Transactions uniques: 0 — Total: 0,00 $</div>
+  </section>
 
-    <section class="panel results-panel">
-      <h2 class="section-title">Transactions</h2>
-      <div id="resultsList" class="list"></div>
-    </section>
+  <section class="panel results-panel">
+    <h2 class="section-title">Transactions</h2>
+    <div id="resultsList" class="list"></div>
+  </section>
 
-    <section class="panel">
-      <h2 class="section-title">Aperçu PDF</h2>
-      <div id="pdf-content" style="height:400px; overflow:auto;"></div>
-    </section>
+</main>
 
-  </main>
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
-  <script type="module" src="app.js"></script>
+<div id="pdf-content" style="display:none;"></div>
+<!-- jsPDF (UMD) -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<!-- PDF.js moderne ES module -->
+<script type="module">
+  import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.mjs";
+
+  // Worker ES module
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.mjs";
+
+  // On expose pdfjsLib à window pour que app.js puisse l'utiliser
+  window.pdfjsLib = pdfjsLib;
+</script>
+
+<!-- Tesseract OCR -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.2/dist/tesseract.min.js"></script>
+
+<!-- Ton script -->
+<script type="module" src="app.js"></script>
+
 </body>
 </html>
