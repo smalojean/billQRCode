@@ -42,8 +42,7 @@ body{
 
 .field-label{display:block;margin-bottom:8px;font-weight:600;font-size:0.95rem}
 
-input[type="file"]{width:100%;}
-.input-small{width:100%; padding:8px;border-radius:8px;border:1px solid #e0e3ea;font-size:0.95rem}
+input[type="file"], .input-small{width:100%; padding:8px;border-radius:8px;border:1px solid #e0e3ea;font-size:0.95rem}
 
 .row{display:flex;flex-wrap:wrap;align-items:center}
 .gap-sm{gap:8px;margin-top:8px}
@@ -57,6 +56,7 @@ input[type="file"]{width:100%;}
   font-weight:600;
   min-height:44px;
   flex:1;
+  cursor:pointer;
 }
 .btn.primary{
   background:var(--accent);
@@ -77,19 +77,10 @@ input[type="file"]{width:100%;}
 .tx-title{font-weight:700;font-size:0.95rem}
 .tx-sub{font-size:0.85rem;color:var(--muted);margin-top:6px;word-break:break-all}
 
-#pdf-content {
-  font-family: Arial, sans-serif;
-  padding: 20px;
-}
-.pdf-transaction {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
-.pdf-total {
-  margin-top: 12px;
-  font-weight: bold;
-  font-size: 1.1rem;
+#pdf-content iframe{
+  width:100%;
+  height:100%;
+  border:none;
 }
 
 @media (min-width:640px){

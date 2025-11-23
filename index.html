@@ -10,13 +10,13 @@
 
   <header class="topbar">
     <h1>QR → Transactions</h1>
-    <p class="subtitle">Importe images → extrait transactions → PDF</p>
+    <p class="subtitle">Importe images/PDF → extrait transactions → PDF</p>
   </header>
 
   <main class="container">
 
     <section class="panel">
-      <label class="field-label">Importer des images (factures)</label>
+      <label class="field-label">Importer des images ou PDF (factures)</label>
       <input id="fileInput" type="file" accept="image/*,application/pdf" multiple>
       <div class="row gap-sm">
         <button id="processBtn" class="btn primary">Scanner & Traiter</button>
@@ -43,10 +43,12 @@
       <div id="resultsList" class="list"></div>
     </section>
 
-  </main>
+    <section class="panel">
+      <h2 class="section-title">Aperçu PDF</h2>
+      <div id="pdf-content" style="height:400px; overflow:auto;"></div>
+    </section>
 
-  <!-- zone invisible pour PDF -->
-  <div id="pdf-content" style="display:none;"></div>
+  </main>
 
   <script type="module" src="app.js"></script>
 </body>
