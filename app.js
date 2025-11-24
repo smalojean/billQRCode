@@ -8,9 +8,12 @@ const status = document.getElementById("status");
 const countsDiv = document.getElementById("counts");
 const subtractInput = document.getElementById("subtractInput");
 const previewPdfBtn = document.getElementById("previewPdfBtn");
+const clearBtn = document.getElementById("clearBtn");
 
 let transactions = [];
 let majorityDay = null;
+let loadingInterval;
+
 
 // ===== Utilitaires =====
 function formatDay(date) {
@@ -29,6 +32,29 @@ function parseNumber(str) {
   return parseFloat(str.replace(",", ".").replace(/\s*\$/g,"")) || 0;
 }
 
+function startLoadingAnimation() {
+  let dots = 0;
+  let increasing = true;
+  status.textContent = "Traitement";
+
+  loadingInterval = setInterval(() => {
+    status.textContent = "Traitement" + ".".repeat(dots);
+
+    if (increasing) {
+      dots++;
+      if (dots === 6) increasing = false;
+    } else {
+      dots--;
+      if (dots === 0) increasing = true;
+    }
+  }, 300);
+}
+
+function stopLoadingAnimation() {
+  clearInterval(loadingInterval);
+  status.textContent = "Terminé";
+}
+
 // ===== Événement : traitement des fichiers =====
 processBtn.addEventListener("click", async () => {
   const files = [...fileInput.files];
@@ -36,15 +62,17 @@ processBtn.addEventListener("click", async () => {
 
   status.textContent = "Traitement...";
   transactions = [];
+  startLoadingAnimation();
 
   for (const f of files) {
+    await new Promise(r => setTimeout(r, 50));
     const results = await processPDF(f);
     transactions.push(...results);
   }
 
   // Filtrer et organiser les transactions
   transactions = processTransactions(transactions);
-
+  stopLoadingAnimation();
   // Affichage
   displayTransactions();
   updateCounts();
@@ -157,4 +185,20 @@ previewPdfBtn.addEventListener("click", () => {
   const lines = content.split("\n");
   lines.forEach((line, i) => doc.text(10, 10 + i * 7, line));
   doc.save("Apercu_Transactions.pdf");
+});
+
+clearBtn.addEventListener("click", () => {
+  // 1. Réinitialiser l'input fichier
+  fileInput.value = "";
+
+  // 2. Réinitialiser le montant à soustraire
+  subtractInput.value = "";
+
+  // 3. Vider les transactions
+  transactions = [];
+
+  // 4. Réinitialiser l'affichage
+  resultsList.innerHTML = "";
+  countsDiv.textContent = "Transactions uniques: 0 — Total: 0,00 $";
+  status.textContent = "Statut: prêt";
 });
